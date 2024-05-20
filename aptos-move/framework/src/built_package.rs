@@ -17,8 +17,12 @@ use codespan_reporting::{
 };
 use itertools::Itertools;
 use move_binary_format::CompiledModule;
-use move_command_line_common::files::MOVE_COMPILED_EXTENSION;
-use move_compiler::compiled_unit::{CompiledUnit, NamedCompiledModule};
+use move_command_line_common::{env::bool_to_str, files::MOVE_COMPILED_EXTENSION};
+use move_compiler::{
+    command_line::{MOVE_COMPILER_WARNINGS_ARE_ERRORS_FLAG, WARN_UNUSED_FLAG},
+    compiled_unit::{CompiledUnit, NamedCompiledModule},
+    shared::move_compiler_warnings_are_errors_env_var,
+};
 use move_core_types::{language_storage::ModuleId, metadata::Metadata};
 use move_model::{
     metadata::{CompilerVersion, LanguageVersion},
@@ -97,6 +101,10 @@ pub struct BuildOptions {
     pub known_attributes: BTreeSet<String>,
     #[clap(skip)]
     pub experiments: Vec<String>,
+    #[clap(long = WARN_UNUSED_FLAG, default_value="false")]
+    pub warn_unused: bool,
+    #[clap(long = MOVE_COMPILER_WARNINGS_ARE_ERRORS_FLAG, bool_to_str(move_compilers_warnings_are_errors_env_var()))]
+    pub warnings_are_errors: bool,
 }
 
 // Because named_addresses has no parser, we can't use clap's default impl. This must be aligned
@@ -124,6 +132,8 @@ impl Default for BuildOptions {
             check_test_code: false,
             known_attributes: extended_checks::get_all_attribute_names().clone(),
             experiments: vec![],
+            warnings_are_errors: move_compiler_warnings_are_errors_env_var(),
+            warn_unused: false,
         }
     }
 }
@@ -168,6 +178,7 @@ pub fn build_model(
     skip_attribute_checks: bool,
     known_attributes: BTreeSet<String>,
     experiments: Vec<String>,
+    warnings_are_errors: bool,
 ) -> anyhow::Result<GlobalEnv> {
     let bytecode_version = Some(
         language_version
@@ -195,17 +206,21 @@ pub fn build_model(
             skip_attribute_checks,
             known_attributes,
             experiments,
+            warnings_are_errors,
         },
     };
     let compiler_version = compiler_version.unwrap_or_default();
     let language_version = language_version.unwrap_or_default();
     compiler_version.check_language_support(language_version)?;
-    build_config.move_model_for_package(package_path, ModelConfig {
-        target_filter,
-        all_files_as_targets: false,
-        compiler_version,
-        language_version,
-    })
+    build_config.move_model_for_package(
+        package_path,
+        ModelConfig {
+            target_filter,
+            all_files_as_targets: false,
+            compiler_version,
+            language_version,
+        },
+    )
 }
 
 impl BuiltPackage {
@@ -240,6 +255,7 @@ impl BuiltPackage {
                 skip_attribute_checks,
                 known_attributes: options.known_attributes.clone(),
                 experiments: options.experiments.clone(),
+                warnings_are_errors: options.warnings_are_errors,
             },
         };
 
