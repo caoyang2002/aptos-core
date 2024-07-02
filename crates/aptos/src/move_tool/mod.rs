@@ -642,6 +642,7 @@ impl CliCommand<&'static str> for ProvePackage {
                 move_options.skip_attribute_checks,
                 extended_checks::get_all_attribute_names(),
                 &[],
+                move_options.warnings_are_errors,
             )
         })
         .await
