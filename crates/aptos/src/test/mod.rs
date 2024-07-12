@@ -1106,6 +1106,7 @@ impl CliTestFramework {
             language_version: None,
             skip_attribute_checks: false,
             check_test_code: false,
+            warnings_are_errors: false,
         }
     }
 
