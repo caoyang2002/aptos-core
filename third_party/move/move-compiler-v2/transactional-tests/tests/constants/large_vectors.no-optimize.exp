@@ -10,7 +10,7 @@ comparison between v1 and v2 failed:
 +   │                        ^
 + 
 + 
-+ Exiting with bytecode verification errors
++ exiting with bytecode verification errors
 + 
 + 
 = task 1 'run'. lines 17-17:
