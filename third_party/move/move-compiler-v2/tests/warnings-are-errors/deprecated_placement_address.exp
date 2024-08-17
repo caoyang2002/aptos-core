@@ -1,0 +1,35 @@
+// -- Model dump before bytecode pipeline
+module 0x41::N {
+    struct S {
+        dummy_field: bool,
+    }
+    public fun bar(): N::S {
+        pack N::S(false)
+    }
+    public fun consume(_x: N::S) {
+        Tuple()
+    }
+} // end 0x41::N
+module 0x42::M {
+    use 0x41::N; // resolved as: 0x41::N
+    struct S {
+        dummy_field: bool,
+    }
+    public fun foo(): N::S {
+        N::bar()
+    }
+} // end 0x42::M
+module <SELF>_0 {
+    use 0x42::M; // resolved as: 0x42::M
+    use 0x41::N::{S}; // resolved as: 0x41::N
+    private fun main() {
+        {
+          let foo: N::S = M::foo();
+          N::consume(foo);
+          Tuple()
+        }
+    }
+} // end <SELF>_0
+
+
+============ bytecode verification succeeded ========

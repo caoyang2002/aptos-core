@@ -1,0 +1,15 @@
+
+Diagnostics:
+warning: invalid documentation comment
+  ┌─ tests/warnings-are-errors/comments_nested_unbalanced.move:4:5
+  │
+4 │     /** This comment must be closed.
+  │     ^^ Unclosed block comment
+
+// -- Model dump before bytecode pipeline
+
+
+
+============ bytecode verification succeeded ========
+
+Error: Warnings found, and configuration indicates that warnings should be treated as errors

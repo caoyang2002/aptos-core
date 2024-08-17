@@ -1,0 +1,9 @@
+
+Diagnostics:
+warning: invalid documentation comment
+  ┌─ tests/parser/comments_nested_unbalanced.move:4:5
+  │
+4 │     /** This comment must be closed.
+  │     ^^ Unclosed block comment
+
+// -- Model dump before bytecode pipeline
