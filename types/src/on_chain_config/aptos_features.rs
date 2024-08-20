@@ -93,6 +93,7 @@ pub enum FeatureFlag {
     ENABLE_RESOURCE_ACCESS_CONTROL = 75,
     REJECT_UNSTABLE_BYTECODE_FOR_SCRIPT = 76,
     LITE_ACCOUNT = 77,
+    DEFAULT_TO_LITE_ACCOUNT = 78,
 }
 
 impl FeatureFlag {
@@ -169,6 +170,7 @@ impl FeatureFlag {
             FeatureFlag::ENABLE_RESOURCE_ACCESS_CONTROL,
             FeatureFlag::REJECT_UNSTABLE_BYTECODE_FOR_SCRIPT,
             FeatureFlag::LITE_ACCOUNT,
+            FeatureFlag::DEFAULT_TO_LITE_ACCOUNT,
         ]
     }
 }
