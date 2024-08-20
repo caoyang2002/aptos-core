@@ -522,6 +522,7 @@ pub type BindList = Spanned<Vec<Bind>>;
 pub struct TypedBind_(pub Bind, pub Option<Type>);
 pub type TypedBind = Spanned<TypedBind_>;
 
+// b1 [":" <Type>], ..., bn [":" <Type>]
 pub type TypedBindList = Spanned<Vec<TypedBind>>;
 
 pub type BindWithRange = Spanned<(Bind, Exp)>;
@@ -663,7 +664,7 @@ pub enum Exp_ {
 
     // { seq }
     Block(Sequence),
-    // |x1, ..., xn| e
+    // | x1 [: t1], ..., xn [: tn] | e
     Lambda(TypedBindList, Box<Exp>),
     // forall/exists x1 : e1, ..., xn [{ t1, .., tk } *] [where cond]: en.
     Quant(
