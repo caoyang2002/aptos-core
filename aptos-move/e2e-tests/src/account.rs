@@ -13,11 +13,11 @@ use aptos_types::{
     account_config::{self, AccountResource, CoinStoreResource},
     chain_id::ChainId,
     event::{EventHandle, EventKey},
-    keyless::KeylessPublicKey,
+    keyless::AnyKeylessPublicKey,
     state_store::state_key::StateKey,
     transaction::{
-        authenticator::{AnyPublicKey, AuthenticationKey},
-        EntryFunction, RawTransaction, Script, SignedTransaction, TransactionPayload,
+        authenticator::AuthenticationKey, EntryFunction, RawTransaction, Script, SignedTransaction,
+        TransactionPayload,
     },
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
@@ -30,14 +30,24 @@ pub const DEFAULT_EXPIRATION_TIME: u64 = 4_000_000;
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum AccountPublicKey {
     Ed25519(Ed25519PublicKey),
-    Keyless(KeylessPublicKey),
+    // TODO: Do not expose this directly here since we'd have to make up for it in to_bytes below (AFAICT).
+    //  instead, expose an AnyPublicKey?
+    Keyless(AnyKeylessPublicKey),
 }
 
 impl AccountPublicKey {
     pub fn to_bytes(&self) -> Vec<u8> {
         match self {
             AccountPublicKey::Ed25519(pk) => pk.to_bytes().to_vec(),
-            AccountPublicKey::Keyless(pk) => pk.to_bytes(),
+            AccountPublicKey::Keyless(pk) => {
+                // TODO: I don't think this should be called on a keyless AccountPublicKey until we
+                //  refactor AccountPublicKey to actually contain an AnyPublicKey? I believe, higher
+                //  level callers would expect a serialized AnyPublicKey that contains a keyless PK.
+                match pk {
+                    AnyKeylessPublicKey::Normal(pk) => pk.to_bytes(),
+                    AnyKeylessPublicKey::Federated(pk) => pk.to_bytes(),
+                }
+            },
         }
     }
 
@@ -48,7 +58,7 @@ impl AccountPublicKey {
         }
     }
 
-    pub fn as_keyless(&self) -> Option<KeylessPublicKey> {
+    pub fn as_keyless(&self) -> Option<AnyKeylessPublicKey> {
         match self {
             AccountPublicKey::Keyless(pk) => Some(pk.clone()),
             AccountPublicKey::Ed25519(_) => None,
@@ -187,9 +197,7 @@ impl Account {
     pub fn auth_key(&self) -> Vec<u8> {
         match &self.pubkey {
             AccountPublicKey::Ed25519(pk) => AuthenticationKey::ed25519(pk),
-            AccountPublicKey::Keyless(pk) => {
-                AuthenticationKey::any_key(AnyPublicKey::keyless(pk.clone()))
-            },
+            AccountPublicKey::Keyless(pk) => AuthenticationKey::any_key(pk.clone().into()),
         }
         .to_vec()
     }
