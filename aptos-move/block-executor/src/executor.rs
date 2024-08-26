@@ -657,7 +657,7 @@ where
                     && block_limit_processor.should_end_block_parallel()
                 {
                     // Set the execution output status to be SkipRest, to skip the rest of the txns.
-                    last_input_output.update_to_skip_rest(txn_idx);
+                    last_input_output.update_to_skip_rest(txn_idx)?;
                 }
             }
 
@@ -854,7 +854,7 @@ where
         }
 
         let mut final_results = final_results.acquire();
-        match last_input_output.take_output(txn_idx) {
+        match last_input_output.take_output(txn_idx)? {
             ExecutionStatus::Success(t) | ExecutionStatus::SkipRest(t) => {
                 final_results[txn_idx as usize] = t;
             },
@@ -884,6 +884,7 @@ where
         params: &ParallelExecutionParams,
     ) -> Result<(), PanicOr<ParallelBlockExecutionError>> {
         // Make executor for each task. TODO: fast concurrent executor.
+        let num_txns = block.len();
         let init_timer = VM_INIT_SECONDS.start_timer();
         let vm_init_view: VMInitView<'_, T, S> = VMInitView::new(base_view, versioned_cache);
         let executor = E::init(env.clone(), &vm_init_view);
@@ -910,6 +911,19 @@ where
         };
 
         loop {
+            if let SchedulerTask::ValidationTask(_, incarnation, _) = &scheduler_task {
+                if *incarnation as usize > num_txns + 10 {
+                    // Something is wrong if we observe high incarnations (e.g. a bug
+                    // might manifest as an execution-invalidation cycle). Break out with
+                    // an error to fallback to sequential execution.
+                    return Err(code_invariant_error(format!(
+                        "BlockSTM: too high incarnation {}, block len {}",
+                        *incarnation, num_txns,
+                    ))
+                    .into());
+                }
+            }
+
             if params.worker_should_commit(worker_id) {
                 while scheduler.should_coordinate_commits() {
                     self.prepare_and_queue_commit_ready_txns(
@@ -1082,6 +1096,15 @@ where
             }
         });
         drop(timer);
+
+        if !shared_maybe_error.load(Ordering::SeqCst) && scheduler.pop_from_commit_queue().is_ok() {
+            // No error is recorded, parallel execution workers are done, but there is
+            // still a commit task remaining. Commit tasks must be drained before workers
+            // exit, hence we log an error and fallback to sequential execution.
+            alert!("[BlockSTM] error: commit tasks not drained after parallel execution");
+
+            shared_maybe_error.store(true, Ordering::Relaxed);
+        }
 
         counters::update_state_counters(versioned_cache.stats(), true);
 
