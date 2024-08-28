@@ -7,6 +7,7 @@ pub use map::LayeredMap;
 use std::hash::Hash;
 
 mod dropper;
+mod flatten_perfect_tree;
 pub mod iterator;
 mod layer;
 mod map;

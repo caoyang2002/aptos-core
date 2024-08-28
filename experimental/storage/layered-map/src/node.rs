@@ -208,4 +208,23 @@ impl<K, V> NodeStrongRef<K, V> {
             },
         }
     }
+
+    pub fn children(&self, depth: usize, base_layer: u64) -> (Self, Self) {
+        use NodeStrongRef::*;
+
+        match self {
+            Empty => (Empty, Empty),
+            Leaf(leaf) => {
+                if leaf.key_hash.bit(depth) {
+                    (Empty, self.clone())
+                } else {
+                    (self.clone(), Empty)
+                }
+            },
+            Internal(internal) => (
+                internal.left.get_strong(base_layer),
+                internal.right.get_strong(base_layer),
+            ),
+        }
+    }
 }
