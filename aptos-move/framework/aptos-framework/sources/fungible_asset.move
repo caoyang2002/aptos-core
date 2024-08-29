@@ -194,6 +194,12 @@ module aptos_framework::fungible_asset {
         metadata: Object<Metadata>
     }
 
+    struct WithdrawPermission has key, drop {
+        // address should come from Object<Metadata>,
+        // @aptos_fungible_asset for APT
+        limit: SimpleMap<address, u64>
+    }
+
     #[event]
     /// Emitted when fungible assets are deposited into a store.
     struct Deposit has drop, store {
@@ -785,7 +791,34 @@ module aptos_framework::fungible_asset {
         amount: u64,
     ): FungibleAsset acquires FungibleStore, DispatchFunctionStore, ConcurrentFungibleBalance {
         withdraw_sanity_check(owner, store, true);
+        withdraw_permission_check(owner, store, amount);
         withdraw_internal(object::object_address(&store), amount)
+    }
+
+    /// Check the permission for withdraw operation.
+    public(friend) fun withdraw_permission_check<T: key>(
+        owner: &signer,
+        store: Object<T>,
+        amount: u64,
+    ) acquires FungibleStore, DispatchFunctionStore {
+        if(!is_permissioned_signer(owner)) {
+            return;
+        }
+        // TODO: check if exists
+        let withdraw_permission = borrow_global_mut<WithdrawPermission>(
+            signer::address_of(permission_signer(owner))
+        );
+        let metadata_addr = object::object_address(&borrow_store_resource(store).metadata);
+        if(!simple_map::contains_key(&withdraw_permission.limit, metadata_addr)) {
+            // Don't have the permission to withdraw this token type
+            abort;
+        }
+        let limit = simple_map::borrow_mut(&mut withdraw_permission.limit, metadata_addr);
+        if(*limit < amount) {
+            // Withdraw exceeds limit
+            abort;
+        }
+        *limit -= amount;
     }
 
     /// Check the permission for withdraw operation.
@@ -1177,6 +1210,64 @@ module aptos_framework::fungible_asset {
         store.balance = 0;
         let object_signer = create_signer::create_signer(fungible_store_address);
         move_to(&object_signer, ConcurrentFungibleBalance { balance });
+    }
+
+    /// Permission management
+    ///
+    /// Master signer grant permissioned signer ability to withdraw a given amount of fungible asset.
+    public fun grant_permission(
+        master: &signer,
+        permissioned: &signer,
+        token_type: Object<Metadata>,
+        amount: u64
+    ) {
+        // address_of(master) == adress_of(permissioned);
+        permissioned_signer::assert_can_grant(master, permissioned);
+        let permission_signer = permissioned_signer::permission_signer(permissioned);
+
+        // permission_addr != address_of(master)
+        let permission_addr = signer::address_of(permission_signer);
+        if(!exists<WithdrawPermission>(permission_addr)) {
+            // permission write auth
+            move_to<WithdrawPermission>(permission_signer, TransferPermission {
+                limit: simple_map::new(),
+            })
+        }
+        let perm = borrow_global_mut<TransferPermission>(permission_addr);
+        simple_map::upsert(&mut perm.limit, object::object_address(&token_type), amount);
+    }
+
+    // entry fun (master: &signer) {
+    //     let p_handle = create_permissioned_signer(master);
+    //     let permissioned_signer = signer_from_permissioned(&p);
+    //     let cap = fa::grant_permission(master, permissioned_signer, @apt, 10);
+    //     ... perform body
+    //     fa::revoke_all(master, permissioned_signer, cap);
+    // }
+
+    public fun revoke_permission(master: &signer, permissioned: &signer, token_type: Object<Metadata>) {
+        // Do we need master signer to revoke a permission?
+        permissioned_signer::assert_can_grant(master, permissioned);
+        let permission_signer = permissioned_signer::permission_signer(permissioned);
+        let permission_addr = signer::address_of(permission_signer);
+        if(exists<WithdrawPermission>(permission_addr)) {
+            let perm = borrow_global_mut<TransferPermission>(permission_addr);
+            let token_addr = object::object_address(&token_type);
+            if(simple_map::contains_key(&perm.limit, &token_addr)) {
+                simple_map::remove(&mut perm.limit, &token_addr);
+            }
+        }
+    }
+
+    public fun revoke_all(master: &signer, permissioned: &signer) {
+        // Do we need master signer to revoke a permission?
+        permissioned_signer::assert_can_grant(master, permissioned);
+        let permission_signer = permissioned_signer::permission_signer(permissioned);
+        let permission_addr = signer::address_of(permission_signer);
+        if(exists<WithdrawPermission>(permission_addr)) {
+            let WithdrawPermission { limit } = move_from<WithdrawPermission>(permission_signer);
+            simple_map::destroy(limit, |_k| {}, |_v| {});
+        }
     }
 
     #[test_only]
