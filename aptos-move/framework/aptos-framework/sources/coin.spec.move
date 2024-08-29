@@ -63,10 +63,10 @@ spec aptos_framework::coin {
         global supply<CoinType>: num;
         global aggregate_supply<CoinType>: num;
         apply TotalSupplyTracked<CoinType> to *<CoinType> except
-        initialize, initialize_internal, initialize_with_parallelizable_supply;
+        initialize;
         // TODO(fa_migration)
         // apply TotalSupplyNoChange<CoinType> to *<CoinType> except mint,
-        //     burn, burn_from, initialize, initialize_internal, initialize_with_parallelizable_supply;
+        //     burn, burn_from, initialize;
     }
 
     spec fun spec_fun_supply_tracked<CoinType>(val: u64, supply: Option<OptionalAggregator>): bool {
@@ -422,35 +422,6 @@ spec aptos_framework::coin {
             optional_aggregator::is_parallelizable(post_supply) && post_value == value;
     }
 
-    spec initialize {
-        let account_addr = signer::address_of(account);
-        /// [high-level-req-1.2]
-        aborts_if type_info::type_of<CoinType>().account_address != account_addr;
-        /// [high-level-req-2]
-        aborts_if exists<CoinInfo<CoinType>>(account_addr);
-        aborts_if string::length(name) > MAX_COIN_NAME_LENGTH;
-        aborts_if string::length(symbol) > MAX_COIN_SYMBOL_LENGTH;
-    }
-
-    // `account` must be `@aptos_framework`.
-    spec initialize_with_parallelizable_supply<CoinType>(
-    account: &signer,
-    name: string::String,
-    symbol: string::String,
-    decimals: u8,
-    monitor_supply: bool,
-    ): (BurnCapability<CoinType>, FreezeCapability<CoinType>, MintCapability<CoinType>) {
-        use aptos_framework::aggregator_factory;
-        let addr = signer::address_of(account);
-        aborts_if addr != @aptos_framework;
-        aborts_if monitor_supply && !exists<aggregator_factory::AggregatorFactory>(@aptos_framework);
-        include InitializeInternalSchema<CoinType> {
-            name: name.bytes,
-            symbol: symbol.bytes
-        };
-        ensures exists<CoinInfo<CoinType>>(addr);
-    }
-
     /// Make sure `name` and `symbol` are legal length.
     /// Only the creator of `CoinType` can initialize.
     spec schema InitializeInternalSchema<CoinType> {
@@ -465,13 +436,12 @@ spec aptos_framework::coin {
         aborts_if len(symbol) > MAX_COIN_SYMBOL_LENGTH;
     }
 
-    spec initialize_internal<CoinType>(
+    spec initialize<CoinType>(
     account: &signer,
     name: string::String,
     symbol: string::String,
     decimals: u8,
     monitor_supply: bool,
-    parallelizable: bool,
     ): (BurnCapability<CoinType>, FreezeCapability<CoinType>, MintCapability<CoinType>) {
         include InitializeInternalSchema<CoinType> {
             name: name.bytes,
@@ -480,19 +450,14 @@ spec aptos_framework::coin {
         let account_addr = signer::address_of(account);
         let post coin_info = global<CoinInfo<CoinType>>(account_addr);
         let post supply = option::spec_borrow(coin_info.supply);
-        let post value = optional_aggregator::optional_aggregator_value(supply);
-        let post limit = optional_aggregator::optional_aggregator_limit(supply);
         modifies global<CoinInfo<CoinType>>(account_addr);
-        aborts_if monitor_supply && parallelizable
-            && !exists<aggregator_factory::AggregatorFactory>(@aptos_framework);
         /// [managed_coin::high-level-req-2]
         ensures exists<CoinInfo<CoinType>>(account_addr)
             && coin_info.name == name
             && coin_info.symbol == symbol
             && coin_info.decimals == decimals;
         ensures if (monitor_supply) {
-            value == 0 && limit == MAX_U128
-                && (parallelizable == optional_aggregator::is_parallelizable(supply))
+            optional_aggregator::is_empty(supply)
         } else {
             option::spec_is_none(coin_info.supply)
         };
