@@ -338,6 +338,11 @@ impl ForgeConfig {
                 helm_values["validator"]["rust_log"] = "debug,hyper=off".into();
                 helm_values["fullnode"]["rust_log"] = "debug,hyper=off".into();
             }
+
+            helm_values["validator"]["storage"]["rocksdb_configs"]["enable_storage_sharding"] =
+                "true".into();
+            helm_values["fullnode"]["storage"]["rocksdb_configs"]["enable_storage_sharding"] =
+                "true".into();
         }))
     }
 
