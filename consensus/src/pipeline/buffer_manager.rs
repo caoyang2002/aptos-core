@@ -300,7 +300,7 @@ impl BufferManager {
     }
 
     fn try_add_pending_commit_proof(&mut self, commit_proof: LedgerInfoWithSignatures) -> bool {
-        const MAX_PENDING_COMMIT_PROOFS: usize = 100;
+        const MAX_PENDING_COMMIT_PROOFS: usize = 1000;
 
         let round = commit_proof.commit_info().round();
         let block_id = commit_proof.commit_info().id();
