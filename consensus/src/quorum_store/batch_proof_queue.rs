@@ -381,6 +381,12 @@ impl BatchProofQueue {
             .map(|item| {
                 let proof = item.proof.clone().expect("proof must exist due to filter");
                 let bucket = proof.gas_bucket_start();
+                assert!(
+                    proof.expiration() >= block_timestamp,
+                    "Proof is expiring: {}. timestamp: {}",
+                    proof,
+                    block_timestamp
+                );
                 counters::pos_to_pull(
                     bucket,
                     item.proof_insertion_time
