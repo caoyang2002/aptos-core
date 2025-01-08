@@ -48,7 +48,7 @@ We require every PR to have approval by at least two reviewers. This is enforced
 - Change requests should try to avoid minor coding style issues. It's a final balancing about what minor or major code style issues are.
 - When you review, consider the context of the code. You can use an IDE like VS Code or CLion to conduct reviews in the IDE which allows navigating the code.
 - Be cordial in the way how to formulate your comments. "Can you please explain what this does?" goes a long way compared to "This looks strange to me".
-- Do not micromanage style. It is good to have some alignment on coding style, but there is also some freedom how things can be done.  
+- Do not micromanage style. It is good to have some alignment on coding style, but there is also some freedom how things can be done.
 
 ## Code documentation
 

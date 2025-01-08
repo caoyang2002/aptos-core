@@ -1,59 +1,62 @@
 [package]
-name = "move-compiler-v2"
-version = "0.1.0"
-authors = ["Aptos Labs"]
-description = "Move compiler based on stackless bytecode"
-repository = "https://github.com/aptos-labs/aptos-core"
-homepage = "https://aptosfoundation.org/"
-license = "Apache-2.0"
-publish = false
-edition = "2021"
+name = "move-compiler-v2"          # 包名称,这是 Move 编译器的第二个版本
+version = "0.1.0"                  # 包版本号
+authors = ["Aptos Labs"]           # 作者信息
+description = "Move compiler based on stackless bytecode"  # 包描述:基于无栈字节码的 Move 编译器
+repository = "https://github.com/aptos-labs/aptos-core"   # 代码仓库地址
+homepage = "https://aptosfoundation.org/"                 # 项目主页
+license = "Apache-2.0"             # 使用 Apache 2.0 许可证
+publish = false                    # 禁止发布到 crates.io
+edition = "2021"                   # 使用 Rust 2021 版本
 
 [dependencies]
-abstract-domain-derive = { path = "../move-model/bytecode/abstract_domain_derive" }
-anyhow = { workspace = true }
-bcs = { workspace = true }
-clap = { workspace = true, features = ["derive", "env"] }
-codespan = { workspace = true }
-codespan-reporting = { workspace = true, features = ["serde", "serialization"] }
-ethnum = { workspace = true }
-flexi_logger = { workspace = true }
-im = { workspace = true }
-itertools = { workspace = true }
-log = { workspace = true, features = ["serde"] }
-move-binary-format = { workspace = true }
-move-borrow-graph = { workspace = true }
-move-bytecode-source-map = { workspace = true }
-move-bytecode-verifier = { workspace = true }
-move-command-line-common = { workspace = true }
-move-compiler = { workspace = true }
-move-core-types = { workspace = true }
-move-disassembler = { workspace = true }
-move-ir-types = { workspace = true }
-move-model = { workspace = true }
-move-stackless-bytecode = { workspace = true }
-move-symbol-pool = { workspace = true }
-num = { workspace = true }
-once_cell = { workspace = true }
-petgraph = { workspace = true }
-serde_json = { workspace = true }
+abstract-domain-derive = { path = "../move-model/bytecode/abstract_domain_derive" } # 从本地路径引入抽象域派生宏库
+anyhow = { workspace = true }      # 错误处理库,版本由工作空间管理
+bcs = { workspace = true }         # 二进制序列化库
+clap = { workspace = true, features = ["derive", "env"] }  # 命令行参数解析库
+codespan = { workspace = true }    # 源代码位置跟踪库
+codespan-reporting = { workspace = true, features = ["serde", "serialization"] }  # 错误报告库
+ethnum = { workspace = true }      # 以太坊数字类型库
+flexi_logger = { workspace = true }# 灵活的日志库
+im = { workspace = true }          # 不可变数据结构库
+itertools = { workspace = true }   # 迭代器工具库
+log = { workspace = true, features = ["serde"] }  # 日志库,支持序列化
 
-[dev-dependencies]
-anyhow = { workspace = true }
-datatest-stable = { workspace = true }
-move-command-line-common = { workspace = true }
-move-ir-types = { workspace = true }
-move-prover-test-utils = { workspace = true }
-move-stdlib = { path = "../move-stdlib" }
-walkdir = { workspace = true }
+# Move 语言相关依赖
+move-binary-format = { workspace = true }        # Move 二进制格式库
+move-borrow-graph = { workspace = true }         # Move 借用图分析库
+move-bytecode-source-map = { workspace = true }  # 字节码源码映射库
+move-bytecode-verifier = { workspace = true }    # 字节码验证器
+move-command-line-common = { workspace = true }  # 命令行工具公共库
+move-compiler = { workspace = true }             # Move 编译器库
+move-core-types = { workspace = true }           # Move 核心类型库
+move-disassembler = { workspace = true }         # Move 反汇编器
+move-ir-types = { workspace = true }             # Move IR 类型库
+move-model = { workspace = true }                # Move 语言模型库
+move-stackless-bytecode = { workspace = true }   # 无栈字节码库
+move-symbol-pool = { workspace = true }          # 符号池库
+
+num = { workspace = true }         # 数值计算库
+once_cell = { workspace = true }   # 延迟初始化库
+petgraph = { workspace = true }    # 图算法库
+serde_json = { workspace = true }  # JSON 序列化库
+
+[dev-dependencies]                 # 开发环境依赖
+anyhow = { workspace = true }      # 错误处理库
+datatest-stable = { workspace = true }  # 数据驱动测试框架
+move-command-line-common = { workspace = true }  # Move 命令行工具
+move-ir-types = { workspace = true }    # Move IR 类型
+move-prover-test-utils = { workspace = true }    # Move 证明器测试工具
+move-stdlib = { path = "../move-stdlib" }        # Move 标准库
+walkdir = { workspace = true }     # 目录遍历库
 
 [lib]
-doctest = false
+doctest = false                    # 禁用文档测试
 
 [[test]]
-name = "testsuite"
-harness = false
-doctest = false
+name = "testsuite"                 # 测试套件名称
+harness = false                    # 禁用默认测试框架
+doctest = false                    # 禁用文档测试
 
 [package.metadata.cargo-machete]
-ignored = ["strum"]
+ignored = ["strum"]                # cargo-machete 工具忽略 strum 依赖

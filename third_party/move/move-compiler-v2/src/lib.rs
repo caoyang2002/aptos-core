@@ -2,29 +2,51 @@
 // Parts of the project are originally copyright (c) Meta Platforms, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
-mod bytecode_generator;
-pub mod diagnostics;
-pub mod env_pipeline;
-mod experiments;
-pub mod external_checks;
-mod file_format_generator;
-pub mod lint_common;
-pub mod logging;
-pub mod options;
-pub mod pipeline;
-pub mod plan_builder;
+// 声明模块
+mod bytecode_generator; // 字节码生成器模块
+pub mod diagnostics; // 诊断信息模块
+pub mod env_pipeline; // 环境管道模块
+mod experiments; // 实验特性模块
+pub mod external_checks; // 外部检查模块
+mod file_format_generator; // 文件格式生成器模块
+pub mod lint_common; // lint 通用功能模块
+pub mod logging; // 日志模块
+pub mod options; // 选项配置模块
+pub mod pipeline; // 编译管道模块
+pub mod plan_builder; // 计划构建器模块
 
+// 引入需要的模块和类型
 use crate::{
+    // 错误信息发射器
     diagnostics::Emitter,
+    // 环境管道相关模块
     env_pipeline::{
-        acquires_checker, ast_simplifier, cyclic_instantiation_checker, flow_insensitive_checkers,
-        function_checker, inliner, lambda_lifter, lambda_lifter::LambdaLiftingOptions,
-        model_ast_lints, recursive_struct_checker, rewrite_target::RewritingScope,
-        seqs_in_binop_checker, spec_checker, spec_rewriter, unused_params_checker,
+        // 资源获取检查器
+        acquires_checker,
+        // AST 简化器
+        ast_simplifier,
+        // 循环实例化检查器
+        cyclic_instantiation_checker,
+        // 流不敏感检查器
+        flow_insensitive_checkers,
+        function_checker,
+        inliner,
+        lambda_lifter,
+        lambda_lifter::LambdaLiftingOptions,
+        model_ast_lints,
+        recursive_struct_checker,
+        rewrite_target::RewritingScope,
+        seqs_in_binop_checker,
+        spec_checker,
+        spec_rewriter,
+        unused_params_checker,
         EnvProcessorPipeline,
     },
+    // 编译管道相关模块
     pipeline::{
+        // 能力处理器
         ability_processor::AbilityProcessor,
+        // 可用副本分析
         avail_copies_analysis::AvailCopiesAnalysisProcessor,
         control_flow_graph_simplifier::ControlFlowGraphSimplifier,
         copy_propagation::CopyPropagation,
@@ -42,6 +64,9 @@ use crate::{
         variable_coalescing::VariableCoalescing,
     },
 };
+
+// 引入外部 crate
+// 代码位置报告相关
 use codespan_reporting::{
     diagnostic::Severity,
     term::termcolor::{ColorChoice, StandardStream, WriteColor},
@@ -75,9 +100,10 @@ use move_symbol_pool::Symbol;
 pub use options::Options;
 use std::{collections::BTreeSet, path::Path};
 
+// 定义常量
 const DEBUG: bool = false;
 
-/// Run Move compiler and print errors to stderr.
+/// 运行 Move 编译器并将错误输出到标准错误
 pub fn run_move_compiler_to_stderr(
     options: Options,
 ) -> anyhow::Result<(GlobalEnv, Vec<AnnotatedCompiledUnit>)> {
@@ -86,7 +112,7 @@ pub fn run_move_compiler_to_stderr(
     run_move_compiler(emitter.as_mut(), options)
 }
 
-/// Run move compiler and print errors to given writer. Returns the set of compiled units.
+/// 运行 Move 编译器并将错误输出到指定的写入器
 pub fn run_move_compiler<E>(
     emitter: &mut E,
     options: Options,
@@ -94,21 +120,23 @@ pub fn run_move_compiler<E>(
 where
     E: Emitter + ?Sized,
 {
+    // 设置日志
     logging::setup_logging();
     info!("Move Compiler v2");
 
-    // Run context check.
+    // 运行上下文检查
     let mut env = run_checker_and_rewriters(options.clone())?;
     check_errors(&env, emitter, "checking errors")?;
 
+    // 如果开启了 STOP_BEFORE_STACKLESS_BYTECODE 实验,则提前退出
     if options.experiment_on(Experiment::STOP_BEFORE_STACKLESS_BYTECODE) {
         std::process::exit(0)
     }
 
-    // Run code generator
+    // 运行代码生成器
     let mut targets = run_bytecode_gen(&env);
     check_errors(&env, emitter, "code generation errors")?;
-
+    // 输出调试信息
     if DEBUG {
         debug!("After bytecode_gen, GlobalEnv={}", env.dump_env());
     }
