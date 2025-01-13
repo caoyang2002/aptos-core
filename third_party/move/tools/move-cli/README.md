@@ -574,3 +574,38 @@ This handy command runs exhaustive sanity checks on global storage to detect any
 * All modules link against their dependencies
 * All resources deserialize according to their declared types
 * All events deserialize according to their declared types
+
+
+
+# Move CLI
+
+Move 命令行界面 (Move CLI) 是一个工具，提供了一种与 Move 交互的简便方式，可以用来实验写作和运行 Move 代码，并尝试开发一些对 Move 开发有用的新工具。为了实现这一目标，Move CLI 的命令分为三个主要子命令组：
+
+* **package 命令**：用于创建、编译和测试 Move 包，以及执行与包相关的其他操作。这些命令不依赖于 Move 适配器实现或存储实现。
+* **sandbox 命令**：用于编写 Move 模块和脚本，编写和运行脚本与测试，并查看在本地沙盒环境中执行结果的命令。
+* **experimental 命令**：是目前正在开发中的实验性命令。
+
+除了 `package create` 外，所有 Move CLI 命令都需要在 [Move 包](https://move-language.github.io/move/packages.html) 的上下文中运行。
+
+## 安装
+```shell
+$ cargo install --path move/language/tools/move-cli
+```
+或者
+```shell
+$ cargo install --git https://github.com/move-language/move move-cli --branch main
+```
+
+这将会在你的 Cargo 二进制目录中安装 `move` 二进制文件。对于 macOS 和 Linux，默认情况下该目录是 `~/.cargo/bin`。确保这个路径在你的 `PATH` 环境变量中。
+
+安装完成后，你应该能够运行 Move CLI：
+
+```shell
+$ move
+Move 0.1.0
+Move 编译器和虚拟机的 CLI 前端
+
+使用方法：
+    move [FLAGS] [OPTIONS] <SUBCOMMAND>
+  ...
+```

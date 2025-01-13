@@ -2,6 +2,7 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use tracing::info;
 mod package_lock;
 
 pub mod compilation;
@@ -191,6 +192,7 @@ impl BuildConfig {
     /// Compile the package at `path` or the containing Move package. Exit process on warning or
     /// failure.
     pub fn compile_package<W: Write>(self, path: &Path, writer: &mut W) -> Result<CompiledPackage> {
+        info!("执行编译 move 包");
         let config = self.compiler_config.clone(); // Need clone because of mut self
         let resolved_graph = self.resolution_graph_for_package(path, writer)?;
         let mutx = PackageLock::lock();
@@ -208,6 +210,7 @@ impl BuildConfig {
         external_checks: Vec<Arc<dyn ExternalChecks>>,
         writer: &mut W,
     ) -> Result<(CompiledPackage, Option<model::GlobalEnv>)> {
+      info!("编译包不存在");
         let config = self.compiler_config.clone(); // Need clone because of mut self
         let resolved_graph = self.resolution_graph_for_package(path, writer)?;
         let mutx = PackageLock::lock();
@@ -219,6 +222,7 @@ impl BuildConfig {
 
     #[cfg(feature = "evm-backend")]
     pub fn compile_package_evm<W: Write>(self, path: &Path, writer: &mut W) -> Result<()> {
+      info!("编译包 evm");
         // resolution graph diagnostics are only needed for CLI commands so ignore them by passing a
         // vector as the writer
         let resolved_graph = self.resolution_graph_for_package(path, &mut Vec::new())?;
@@ -233,11 +237,13 @@ impl BuildConfig {
     // across all packages and build the Move model from that.
     // TODO: In the future we will need a better way to do this to support renaming in packages
     // where we want to support building a Move model.
+
     pub fn move_model_for_package(
         self,
         path: &Path,
         model_config: ModelConfig,
     ) -> Result<model::GlobalEnv> {
+      info!("包中的 move 模块");
         // resolution graph diagnostics are only needed for CLI commands so ignore them by passing a
         // vector as the writer
         let resolved_graph = self.resolution_graph_for_package(path, &mut Vec::new())?;
@@ -248,6 +254,7 @@ impl BuildConfig {
     }
 
     pub fn download_deps_for_package<W: Write>(&self, path: &Path, writer: &mut W) -> Result<()> {
+      info!("下载依赖");
         let path = SourcePackageLayout::try_find_root(path)?;
         let toml_manifest =
             self.parse_toml_manifest(path.join(SourcePackageLayout::Manifest.path()))?;
@@ -265,6 +272,7 @@ impl BuildConfig {
         path: &Path,
         writer: &mut W,
     ) -> Result<ResolvedGraph> {
+      info!("解析图");
         if self.test_mode {
             self.dev_mode = true;
         }
@@ -282,6 +290,7 @@ impl BuildConfig {
     }
 
     fn parse_toml_manifest(&self, path: PathBuf) -> Result<toml::Value> {
+      info!("解析配置文件");
         let manifest_string = std::fs::read_to_string(path)?;
         manifest_parser::parse_move_manifest_string(manifest_string)
     }

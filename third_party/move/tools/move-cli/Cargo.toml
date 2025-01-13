@@ -1,6 +1,6 @@
 [package]
 name = "move-cli"
-version = "0.1.0"
+version = "4.2.3"
 authors = ["Diem Association <opensource@diem.com>"]
 description = "CLI frontend for the Move compiler and VM"
 repository = "https://github.com/diem/diem"
@@ -34,6 +34,9 @@ move-vm-test-utils = { workspace = true }
 once_cell = { workspace = true }
 tempfile = { workspace = true }
 
+tracing =  { workspace = true }
+ tracing-subscriber = { workspace = true }
+
 [dev-dependencies]
 datatest-stable = { workspace = true }
 httpmock = { workspace = true }
@@ -63,3 +66,6 @@ required-features = ["evm-backend"]
 [features]
 evm-backend = ["move-unit-test/evm-backend", "move-package/evm-backend"]
 table-extension = ["move-unit-test/table-extension"]
+
+default = ["string-utils"]
+string-utils = []

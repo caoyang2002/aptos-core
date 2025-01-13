@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
-
+use tracing::info;
 use base::{
     build::Build, coverage::Coverage, disassemble::Disassemble, docgen::Docgen, errmap::Errmap,
     new::New, prove::Prove, test::Test,
@@ -69,15 +69,24 @@ pub enum Command {
 }
 
 pub fn run_cli(
+    // 原生函数记录
     natives: Vec<NativeFunctionRecord>,
+    // 创世状态变更集
     genesis: ChangeSet,
+     // gas 成本表
     cost_table: &CostTable,
+    // Move 相关参数
     move_args: Move,
+    // 具体的命令
     cmd: Command,
 ) -> Result<()> {
+
     // TODO: right now, the gas metering story for move-cli (as a library) is a bit of a mess.
     //         1. It's still using the old CostTable.
     //         2. The CostTable only affects sandbox runs, but not unit tests, which use a unit cost table.
+
+    info!("开始执行命令...");
+
     match cmd {
         Command::Build(c) => c.execute(move_args.package_path, move_args.build_config),
         Command::Coverage(c) => c.execute(move_args.package_path, move_args.build_config),
@@ -101,7 +110,9 @@ pub fn move_cli(
     genesis: ChangeSet,
     cost_table: &CostTable,
 ) -> Result<()> {
-    let args = MoveCLI::parse();
+    info!("执行 move-cli ...");
+    let args = MoveCLI::parse(); // clap 捕获到默认命令后会自动退出
+    info!("开始运行 run-cil");
     run_cli(natives, genesis, cost_table, args.move_args, args.cmd)
 }
 

@@ -2,6 +2,7 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use tracing::info;
 use crate::{
     attr_derivation::add_attributes_for_flavor,
     cfgir,
@@ -204,6 +205,9 @@ impl<'a> Compiler<'a> {
         FilesSourceText,
         Result<(CommentMap, SteppedCompiler<'a, TARGET>), Diagnostics>,
     )> {
+
+        info!("编译 run 运行开始");
+
         let Self {
             maps,
             targets,
@@ -219,24 +223,34 @@ impl<'a> Compiler<'a> {
             interface_files_dir_opt,
             &compiled_module_named_address_mapping,
         )?;
+        info!("生成接口文件完成");
         add_attributes_for_flavor(&flags, &mut known_attributes);
         let mut compilation_env = CompilationEnv::new(flags, known_attributes);
+
+        info!("初始化编译环境完成");
         let (source_text, pprog_and_comments_res) =
             parse_program(&mut compilation_env, maps, targets, deps)?;
+
+        info!("解析源码和注释完成");
         let res: Result<_, Diagnostics> = pprog_and_comments_res.and_then(|(pprog, comments)| {
-            SteppedCompiler::new_at_parser(compilation_env, pre_compiled_lib, pprog)
-                .run::<TARGET>()
-                .map(|compiler| (comments, compiler))
+          info!("编译开始");
+            SteppedCompiler::new_at_parser(compilation_env, pre_compiled_lib, pprog) // 创建编译器实例
+                .run::<TARGET>() // 运行编译
+                .map(|compiler| (comments, compiler)) // 将结果与注释组合
         });
+
+        info!("运行结束");
         Ok((source_text, res))
     }
 
     pub fn check(self) -> anyhow::Result<(FilesSourceText, Result<(), Diagnostics>)> {
+      info!("编译 check 运行开始");
         let (files, res) = self.run::<PASS_COMPILATION>()?;
         Ok((files, res.map(|_| ())))
     }
 
     pub fn check_and_report(self) -> anyhow::Result<FilesSourceText> {
+      info!("编译 check_and_report 运行开始");
         let (files, res) = self.check()?;
         unwrap_or_report_diagnostics(&files, res);
         Ok(files)
@@ -248,6 +262,7 @@ impl<'a> Compiler<'a> {
         FilesSourceText,
         Result<(Vec<AnnotatedCompiledUnit>, Diagnostics), Diagnostics>,
     )> {
+      info!("编译 build 运行开始");
         let (files, res) = self.run::<PASS_COMPILATION>()?;
         Ok((
             files,
@@ -256,6 +271,7 @@ impl<'a> Compiler<'a> {
     }
 
     pub fn build_and_report(self) -> anyhow::Result<(FilesSourceText, Vec<AnnotatedCompiledUnit>)> {
+      info!("编译 build_and_report 运行开始");
         let (files, units_res) = self.build()?;
         let (units, warnings) = unwrap_or_report_diagnostics(&files, units_res);
         report_warnings(&files, warnings);
@@ -437,6 +453,7 @@ pub fn construct_pre_compiled_lib<
     flags: Flags,
     known_attributes: &BTreeSet<String>,
 ) -> anyhow::Result<Result<FullyCompiledProgram, (FilesSourceText, Diagnostics)>> {
+    info!("预编译依赖项并保存其抽象语法树");
     let (files, pprog_and_comments_res) = Compiler::from_package_paths(
         targets,
         Vec::<PackagePaths<Paths, NamedAddress>>::new(),
@@ -546,6 +563,7 @@ pub fn sanity_check_compiled_units(
     files: FilesSourceText,
     compiled_units: &[AnnotatedCompiledUnit],
 ) {
+    info!("在编译单元上运行字节码验证器，如果字节码验证器出错，则失败...");
     let ice_errors = compiled_unit::verify_units(compiled_units);
     if !ice_errors.is_empty() {
         report_diagnostics(&files, ice_errors)
@@ -560,6 +578,7 @@ pub fn output_compiled_units(
     compiled_units: Vec<AnnotatedCompiledUnit>,
     out_dir: &str,
 ) -> anyhow::Result<()> {
+    info!("给定一个文件映射和一组已编译的程序，将已编译的程序保存到磁盘...");
     const SCRIPT_SUB_DIR: &str = "scripts";
     const MODULE_SUB_DIR: &str = "modules";
     fn num_digits(n: usize) -> usize {
@@ -763,41 +782,56 @@ impl PassResult {
     }
 }
 
+// 运行编译流程，从当前编译阶段运行到指定的目标阶段
 fn run(
-    compilation_env: &mut CompilationEnv,
-    pre_compiled_lib: Option<&FullyCompiledProgram>,
-    cur: PassResult,
-    until: Pass,
-    mut result_check: impl FnMut(&PassResult, &CompilationEnv),
+    compilation_env: &mut CompilationEnv,  // 编译环境
+    pre_compiled_lib: Option<&FullyCompiledProgram>, // 预编译库，用于增量编译
+    cur: PassResult,  // 当前编译阶段的结果
+    until: Pass, // 目标编译阶段
+    mut result_check: impl FnMut(&PassResult, &CompilationEnv),  // 结果检查回调函数
 ) -> Result<PassResult, Diagnostics> {
+    info!("运行编译器从 {} 到 {}", cur.equivalent_pass(), until);
+    // 确保目标阶段不超过最大编译阶段
     assert!(
         until <= PASS_COMPILATION,
         "Invalid pass for run_to. Target is greater than maximum pass"
     );
+    // 执行结果检查
     result_check(&cur, compilation_env);
+    // 如果当前阶段已经达到或超过目标阶段，直接返回
     if cur.equivalent_pass() >= until {
         return Ok(cur);
     }
 
+    // 根据当前阶段进行不同的处理
     match cur {
+        // 解析阶段：将源代码解析为AST
         PassResult::Parser(prog) => {
+            // 合并规范模块
             let prog = parser::merge_spec_modules::program(compilation_env, prog);
+            // 过滤测试相关的代码成员
             let prog = unit_test::filter_test_members::program(compilation_env, prog);
+            // 进行AST过滤
             let prog = verification::ast_filter::program(compilation_env, prog);
+            // 如果开启调试，打印展开前的程序
             if compilation_env.flags().debug() {
                 eprintln!(
                     "Before expansion: program = {}",
                     ast_debug::display_verbose(&prog)
                 )
             };
+            // 执行展开转换
             let eprog = expansion::translate::program(compilation_env, pre_compiled_lib, prog);
+            // 检查Bug级别的诊断信息
             compilation_env.check_diags_at_or_above_severity(Severity::Bug)?;
+            // 如果开启调试，打印展开后的程序
             if compilation_env.flags().debug() {
                 eprintln!(
                     "After expansion: program = {}",
                     ast_debug::display_verbose(&eprog)
                 )
             };
+            // 递归处理下一阶段
             run(
                 compilation_env,
                 pre_compiled_lib,
@@ -806,15 +840,20 @@ fn run(
                 result_check,
             )
         },
+        // 展开阶段：处理名称绑定和作用域
         PassResult::Expansion(eprog) => {
+            // 执行命名转换
             let nprog = naming::translate::program(compilation_env, pre_compiled_lib, eprog);
+            // 检查Bug级别的诊断信息
             compilation_env.check_diags_at_or_above_severity(Severity::Bug)?;
+            // 如果开启调试，打印命名后的程序
             if compilation_env.flags().debug() {
                 eprintln!(
                     "After naming: program = {}",
                     ast_debug::display_verbose(&nprog)
                 )
             };
+            // 递归处理下一阶段
             run(
                 compilation_env,
                 pre_compiled_lib,
@@ -823,15 +862,20 @@ fn run(
                 result_check,
             )
         },
+        // 命名阶段：执行类型检查
         PassResult::Naming(nprog) => {
+            // 执行类型检查转换
             let tprog = typing::translate::program(compilation_env, pre_compiled_lib, nprog);
+            // 检查阻塞性错误
             compilation_env.check_diags_at_or_above_severity(Severity::BlockingError)?;
+            // 如果开启调试，打印类型检查后的程序
             if compilation_env.flags().debug() {
                 eprintln!(
                     "After typing: program = {}",
                     ast_debug::display_verbose(&tprog)
                 )
             };
+            // 递归处理下一阶段
             run(
                 compilation_env,
                 pre_compiled_lib,
@@ -840,15 +884,20 @@ fn run(
                 result_check,
             )
         },
+        // 类型检查阶段：执行函数内联
         PassResult::Typing(mut tprog) => {
+            // 执行内联优化
             inlining::translate::run_inlining(compilation_env, pre_compiled_lib, &mut tprog);
+            // 检查阻塞性错误
             compilation_env.check_diags_at_or_above_severity(Severity::BlockingError)?;
+            // 如果开启调试，打印内联后的程序
             if compilation_env.flags().debug() {
                 eprintln!(
                     "After inlining: program = {}",
                     ast_debug::display_verbose(&tprog)
                 )
             };
+            // 递归处理下一阶段
             run(
                 compilation_env,
                 pre_compiled_lib,
@@ -857,15 +906,20 @@ fn run(
                 result_check,
             )
         },
+        // 内联阶段：转换为HLIR（高级中间表示）
         PassResult::Inlining(tprog) => {
+            // 转换为HLIR
             let hprog = hlir::translate::program(compilation_env, pre_compiled_lib, tprog);
+            // 检查Bug级别的诊断信息
             compilation_env.check_diags_at_or_above_severity(Severity::Bug)?;
+            // 如果开启调试，打印HLIR
             if compilation_env.flags().debug() {
                 eprintln!(
                     "After hlir: program = {}",
                     ast_debug::display_verbose(&hprog)
                 )
             };
+            // 递归处理下一阶段
             run(
                 compilation_env,
                 pre_compiled_lib,
@@ -874,15 +928,20 @@ fn run(
                 result_check,
             )
         },
+        // HLIR阶段：转换为CFGIR（控制流图中间表示）
         PassResult::HLIR(hprog) => {
+            // 转换为CFGIR
             let cprog = cfgir::translate::program(compilation_env, pre_compiled_lib, hprog);
+            // 检查非阻塞性错误
             compilation_env.check_diags_at_or_above_severity(Severity::NonblockingError)?;
+            // 如果开启调试，打印CFGIR
             if compilation_env.flags().debug() {
                 eprintln!(
                     "After cfgir: program = {}",
                     ast_debug::display_verbose(&cprog)
                 )
             };
+            // 递归处理下一阶段
             run(
                 compilation_env,
                 pre_compiled_lib,
@@ -891,12 +950,18 @@ fn run(
                 result_check,
             )
         },
+        // CFGIR阶段：生成字节码
         PassResult::CFGIR(cprog) => {
+            // 生成编译单元（字节码）
             let compiled_units =
                 to_bytecode::translate::program(compilation_env, pre_compiled_lib, cprog);
+            // 检查非阻塞性错误
             compilation_env.check_diags_at_or_above_severity(Severity::NonblockingError)?;
+            // 获取最终的警告诊断信息
             let warnings = compilation_env.take_final_warning_diags();
+            // 确保这是最终编译阶段
             assert!(until == PASS_COMPILATION);
+            // 递归处理最终结果
             run(
                 compilation_env,
                 pre_compiled_lib,
@@ -905,6 +970,7 @@ fn run(
                 result_check,
             )
         },
+        // 编译完成阶段：不可能到达，因为编译阶段是最终阶段
         PassResult::Compilation(_, _) => unreachable!("ICE Pass::Compilation is >= all passes"),
     }
 }

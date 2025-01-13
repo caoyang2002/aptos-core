@@ -2,6 +2,7 @@
 // Parts of the project are originally copyright © Meta Platforms, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
+
 use crate::{
     experiments::{DefaultValue, EXPERIMENTS},
     external_checks::ExternalChecks,
@@ -24,6 +25,7 @@ use std::{
     collections::{BTreeMap, BTreeSet},
     sync::Arc,
 };
+use tracing::info;
 
 /// Defines options for a run of the compiler.
 #[derive(Parser, Clone, Debug)]
@@ -158,6 +160,7 @@ impl Options {
 
     /// Sets the language version to use.
     pub fn set_language_version(self, version: LanguageVersion) -> Self {
+      info!("设置语言版本 {}", version);
         Self {
             language_version: Some(version),
             ..self

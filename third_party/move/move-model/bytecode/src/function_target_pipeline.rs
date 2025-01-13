@@ -574,7 +574,8 @@ impl FunctionTargetPipeline {
 
     fn debug_dump(base_name: &str, step_count: usize, suffix: &str, content: &str) {
         let name = format!("bytecode of {}_{}_{}", base_name, step_count, suffix);
-        debug!("{}:\n{}\n", name, content.trim())
+        debug!("暂时关闭输出，后期需要打开");
+        //debug!("{}:\n{}\n", name, content.trim())
     }
 
     /// Generate dot files for control-flow graphs.

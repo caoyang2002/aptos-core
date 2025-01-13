@@ -4,6 +4,7 @@
 
 #![forbid(unsafe_code)]
 
+use tracing::info;
 use anyhow::Context;
 use clap::Parser;
 use move_binary_format::{
@@ -46,8 +47,8 @@ struct Args {
 }
 
 fn print_error_and_exit(verification_error: &VMError) -> ! {
-    println!("Verification failed:");
-    println!("{:?}", verification_error);
+    info!("输出错误:");
+    info!("{:?}", verification_error);
     std::process::exit(1);
 }
 

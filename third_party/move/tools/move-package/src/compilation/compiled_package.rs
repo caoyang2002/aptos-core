@@ -42,7 +42,7 @@ use std::{
     sync::Arc,
 };
 use termcolor::{ColorChoice, StandardStream};
-
+use tracing::info;
 #[derive(Debug, Clone)]
 pub enum CompilationCachingStatus {
     /// The package and all if its dependencies were cached
@@ -630,6 +630,7 @@ impl CompiledPackage {
             }
         }
 
+        info!("检查编译器版本");
         // invoke the compiler
         let effective_compiler_version = config.compiler_version.unwrap_or_default();
         let effective_language_version = config.language_version.unwrap_or_default();
@@ -1136,6 +1137,7 @@ pub fn unimplemented_v2_driver(_options: move_compiler_v2::Options) -> CompilerD
 
 /// Runs the v2 compiler, exiting the process if any errors occurred.
 pub fn build_and_report_v2_driver(options: move_compiler_v2::Options) -> CompilerDriverResult {
+  info!("运行 Move V2 编译器");
     let mut stderr = StandardStream::stderr(ColorChoice::Auto);
     let mut emitter = options.error_emitter(&mut stderr);
     match move_compiler_v2::run_move_compiler(emitter.as_mut(), options) {
@@ -1155,6 +1157,7 @@ pub fn build_and_report_v2_driver(options: move_compiler_v2::Options) -> Compile
 pub fn build_and_report_no_exit_v2_driver(
     options: move_compiler_v2::Options,
 ) -> CompilerDriverResult {
+    info!("运行 V2 编译器，报告错误并在编译失败时返回错误");
     let mut stderr = StandardStream::stderr(ColorChoice::Auto);
     let mut emitter = options.error_emitter(&mut stderr);
     let (env, units) = move_compiler_v2::run_move_compiler(emitter.as_mut(), options)?;
@@ -1167,6 +1170,7 @@ pub fn build_and_report_no_exit_v2_driver(
 
 /// Returns the deserialized module from the bytecode file
 fn get_module_in_package(pkg_name: Symbol, pkg_path: &str) -> Result<CompiledModule> {
+    info!("正在读取包 {} 的反序列化的模块", pkg_name);
     // Read the bytecode file
     let mut bytecode = Vec::new();
     std::fs::File::open(pkg_path)

@@ -41,6 +41,8 @@ once_cell = { workspace = true }   # 延迟初始化库
 petgraph = { workspace = true }    # 图算法库
 serde_json = { workspace = true }  # JSON 序列化库
 
+#trcacing = { workspace = true }  # 日志库
+tracing = { version = "0.1", features = ["std"] }  # 日志库
 [dev-dependencies]                 # 开发环境依赖
 anyhow = { workspace = true }      # 错误处理库
 datatest-stable = { workspace = true }  # 数据驱动测试框架

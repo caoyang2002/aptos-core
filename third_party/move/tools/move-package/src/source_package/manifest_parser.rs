@@ -35,6 +35,7 @@ const KNOWN_NAMES: &[&str] = &[
 const REQUIRED_FIELDS: &[&str] = &[PACKAGE_NAME];
 
 pub fn parse_move_manifest_from_file(path: &Path) -> Result<PM::SourceManifest> {
+  println!("解析清单配置文件: {}", path.display());
     let file_contents = if path.is_file() {
         std::fs::read_to_string(path)?
     } else {
@@ -48,6 +49,7 @@ pub fn parse_move_manifest_string(manifest_string: String) -> Result<TV> {
 }
 
 pub fn parse_source_manifest(tval: TV) -> Result<PM::SourceManifest> {
+  
     match tval {
         TV::Table(mut table) => {
             check_for_required_field_names(&table, REQUIRED_FIELDS)

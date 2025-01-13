@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
-
+use tracing::info;
 pub mod ast;
 pub mod comments;
 pub(crate) mod filter;
@@ -39,9 +39,11 @@ pub(crate) fn parse_program(
     FilesSourceText,
     Result<(parser::ast::Program, CommentMap), Diagnostics>,
 )> {
+  info!("解析程序");
     fn find_move_filenames_with_address_mapping(
         paths_with_mapping: Vec<IndexedPackagePath>,
     ) -> anyhow::Result<Vec<IndexedPackagePath>> {
+      info!("通过地址映射查找 move 文件名");
         let mut res = vec![];
         for IndexedPackagePath {
             package,
@@ -58,16 +60,21 @@ pub(crate) fn parse_program(
                         named_address_map: named_address_mapping,
                     }),
             );
+            // tracing::info!("找到 {:?} 个文件",res.len());
         }
         // sort the filenames so errors about redefinitions, or other inter-file conflicts, are
         // deterministic
+        info!("对文件名进行排序");
         res.sort_by(|p1, p2| p1.path.cmp(&p2.path));
         Ok(res)
     }
 
     let targets = find_move_filenames_with_address_mapping(targets)?;
+    info!("目标有 {:?} 个文件", targets.len());
     let mut deps = find_move_filenames_with_address_mapping(deps)?;
+    info!("依赖有 {:?} 个文件", deps.len());
     ensure_targets_deps_dont_intersect(compilation_env, &targets, &mut deps)?;
+    info!("确保目标文件和依赖文件不冲突");
     let mut files: FilesSourceText = HashMap::new();
     let mut source_definitions = Vec::new();
     let mut source_comments = CommentMap::new();
@@ -80,6 +87,7 @@ pub(crate) fn parse_program(
         named_address_map,
     } in targets
     {
+      // tracing::info!("解析文件: {:?}", path);
         let (defs, comments, ds, file_hash) = parse_file(compilation_env, &mut files, path)?;
         source_definitions.extend(defs.into_iter().map(|def| PackageDefinition {
             package,
@@ -87,7 +95,9 @@ pub(crate) fn parse_program(
             def,
         }));
         source_comments.insert(file_hash, comments);
+        // tracing::info!("解析文件完成: {:?}", path);
         diags.extend(ds);
+
     }
 
     for IndexedPackagePath {
@@ -111,6 +121,7 @@ pub(crate) fn parse_program(
     if let Err(env_diags) = env_result {
         diags.extend(env_diags)
     }
+    
 
     // Run attribute expansion on all source definitions, passing in the matching named address map.
     for PackageDefinition {
@@ -185,6 +196,7 @@ fn parse_file(
     Diagnostics,
     FileHash,
 )> {
+//   info!("文件名参数 {}", fname);
     let mut diags = Diagnostics::new();
     let mut f = File::open(fname.as_str())
         .map_err(|err| std::io::Error::new(err.kind(), format!("{}: {}", err, fname)))?;

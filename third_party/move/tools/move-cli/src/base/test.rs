@@ -26,6 +26,8 @@ use move_unit_test::{
 };
 use move_vm_runtime::tracing::{LOGGING_FILE_WRITER, TRACING_ENABLED};
 use move_vm_test_utils::gas_schedule::CostTable;
+use tracing::info;
+
 // if unix
 #[cfg(target_family = "unix")]
 use std::os::unix::prelude::ExitStatusExt;
@@ -104,6 +106,7 @@ impl Test {
         genesis: ChangeSet,
         cost_table: Option<CostTable>,
     ) -> anyhow::Result<()> {
+        info!("开始执行测试...");
         let rerooted_path = reroot_path(path)?;
         let Self {
             gas_limit,
@@ -171,6 +174,7 @@ pub fn run_move_unit_tests<W: Write + Send>(
     compute_coverage: bool,
     writer: &mut W,
 ) -> Result<UnitTestResult> {
+    info!("运行单元测试...");
     run_move_unit_tests_with_factory(
         pkg_path,
         build_config,
@@ -193,6 +197,7 @@ pub fn run_move_unit_tests_with_factory<W: Write + Send, F: UnitTestFactory + Se
     writer: &mut W,
     factory: F,
 ) -> Result<UnitTestResult> {
+    info!("使用工厂模式运行单元测试...");
     let mut test_plan = None;
     let mut test_plan_v2 = None;
 
@@ -200,6 +205,7 @@ pub fn run_move_unit_tests_with_factory<W: Write + Send, F: UnitTestFactory + Se
     build_config.dev_mode = true;
     build_config.generate_move_model = test_validation::needs_validation();
 
+    info!("构建解析图...");
     // Build the resolution graph (resolution graph diagnostics are only needed for CLI commands so
     // ignore them by passing a vector as the writer)
     let resolution_graph = build_config
@@ -327,12 +333,14 @@ pub fn run_move_unit_tests_with_factory<W: Write + Send, F: UnitTestFactory + Se
 
     // If we need to compute test coverage set the VM tracking environment variable since we will
     // need this trace to construct the coverage information.
+    // 如果需要计算测试覆盖率，请设置VM跟踪环境变量，因为我们将需要这个跟踪来构造覆盖率信息。
     if compute_coverage {
         std::env::set_var("MOVE_VM_TRACE", &trace_path);
     }
 
     // Run the tests. If any of the tests fail, then we don't produce a coverage report, so cleanup
     // the trace files.
+    // 运行测试。如果任何测试失败，则不会生成覆盖率报告，因此清理跟踪文件。
     if !unit_test_config
         .run_and_report_unit_tests(test_plan, Some(natives), Some(genesis), writer, factory)
         .unwrap()
@@ -343,6 +351,7 @@ pub fn run_move_unit_tests_with_factory<W: Write + Send, F: UnitTestFactory + Se
     }
 
     // Compute the coverage map. This will be used by other commands after this.
+    // 计算覆盖率地图。这将在其他命令之后使用。
     if compute_coverage && !no_tests {
         if *TRACING_ENABLED {
             let buf_writer = &mut *LOGGING_FILE_WRITER.lock().unwrap();

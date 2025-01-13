@@ -128,6 +128,7 @@ pub fn extension_equals(path: &Path, target_ext: &str) -> bool {
 pub fn verify_and_create_named_address_mapping<T: Copy + std::fmt::Display + Eq>(
     named_addresses: Vec<(String, T)>,
 ) -> anyhow::Result<BTreeMap<String, T>> {
+  
     let mut mapping = BTreeMap::new();
     let mut invalid_mappings = BTreeMap::new();
     for (name, addr_bytes) in named_addresses {

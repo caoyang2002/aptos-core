@@ -1,10 +1,10 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
-
 use super::reroot_path;
 use clap::*;
 use move_package::{Architecture, BuildConfig};
 use std::path::PathBuf;
+use tracing::info;
 
 /// Build the package at `path`. If no path is provided defaults to current directory.
 #[derive(Parser)]
@@ -13,15 +13,19 @@ pub struct Build;
 
 impl Build {
     pub fn execute(self, path: Option<PathBuf>, config: BuildConfig) -> anyhow::Result<()> {
+        info!("构建包...");
         let rerooted_path = reroot_path(path)?;
+        info!("重定向后的路径: {:?}", rerooted_path);
         if config.fetch_deps_only {
             let mut config = config;
             if config.test_mode {
                 config.dev_mode = true;
             }
+            info!("下载依赖包...");
             config.download_deps_for_package(&rerooted_path, &mut std::io::stdout())?;
             return Ok(());
         }
+        info!("通过指定架构编译...");
         let architecture = config.architecture.unwrap_or(Architecture::Move);
 
         match architecture {

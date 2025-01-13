@@ -65,6 +65,7 @@ pub struct Options {
 }
 
 pub fn main() -> anyhow::Result<()> {
+  tracing::info!("开始运行 main 函数 build");
     let Options {
         source_files,
         dependencies,

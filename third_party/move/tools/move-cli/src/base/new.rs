@@ -1,6 +1,7 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use tracing::info;
 use clap::*;
 use move_package::source_package::layout::SourcePackageLayout;
 use std::{
@@ -46,6 +47,7 @@ impl New {
         addrs: impl IntoIterator<Item = (impl Display, impl Display)>,
         custom: &str, // anything else that needs to end up being in Move.toml (or empty string)
     ) -> anyhow::Result<()> {
+        info!("创建新的项目: {}", self.name);
         // TODO warn on build config flags
         let Self { name } = self;
         let p: PathBuf;

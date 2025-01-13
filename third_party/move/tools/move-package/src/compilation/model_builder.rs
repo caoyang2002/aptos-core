@@ -12,6 +12,7 @@ use move_compiler::shared::PackagePaths;
 use move_compiler_v2::Options;
 use move_model::{model::GlobalEnv, options::ModelBuilderOptions, run_model_builder_with_options};
 use termcolor::{ColorChoice, StandardStream};
+use tracing::info;
 
 #[derive(Debug, Clone)]
 pub struct ModelBuilder {
@@ -155,6 +156,7 @@ impl ModelBuilder {
 }
 
 fn make_options_for_v2_compiler(targets: Vec<PackagePaths>, deps: Vec<PackagePaths>) -> Options {
+    info!("为 V2 编译器创建选项");
     let mut options = Options {
         sources: targets
             .iter()

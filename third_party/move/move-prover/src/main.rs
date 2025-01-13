@@ -9,6 +9,7 @@ use move_prover::{cli::Options, run_move_prover, run_move_prover_v2};
 use std::env;
 
 fn main() {
+
     if let Err(e) = run() {
         eprintln!("{}", e);
         let mut c = e.source();
